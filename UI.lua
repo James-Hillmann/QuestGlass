@@ -33,19 +33,30 @@ end
 -- Rows (shared virtual list)
 ------------------------------------------------------------------------
 
+-- ✓ as text isn't in WoW's default font; use the ready-check texture instead
+local CHECK = "|TInterface\\RaidFrames\\ReadyCheck-Ready:14|t"
+
 local function VisibleCount()
     return currentView == "search" and #currentResults or #detailCriteria
 end
 
+-- Rows that actually fit in the list area (the detail header shrinks it)
+local function MaxVisibleRows()
+    local h = detail.listAnchor and detail.listAnchor:GetHeight() or 0
+    if h <= 0 then h = FRAME_H - 130 end
+    return math.min(NUM_ROWS, math.max(1, math.floor((h - 8) / ROW_H)))
+end
+
 local function RefreshList()
     local count = VisibleCount()
-    local maxOffset = math.max(0, count - NUM_ROWS)
+    local visible = MaxVisibleRows()
+    local maxOffset = math.max(0, count - visible)
     if scrollOffset > maxOffset then scrollOffset = maxOffset end
 
     for i = 1, NUM_ROWS do
         local row = listRows[i]
         local idx = scrollOffset + i
-        if idx > count then
+        if i > visible or idx > count then
             row:Hide()
         else
             row:Show()
@@ -56,7 +67,7 @@ local function RefreshList()
                 row.name:SetText(e.name)
                 if e.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
-                    row.right:SetText(e.points .. "p |cff88ff88\226\156\147|r")
+                    row.right:SetText(e.points .. "p " .. CHECK)
                 else
                     row.name:SetTextColor(1, 0.9, 0.5)
                     local done, total = AchProgress(e.id)
@@ -73,7 +84,7 @@ local function RefreshList()
                 row.name:SetText(c.text)
                 if c.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
-                    row.right:SetText("|cff88ff88\226\156\147|r")
+                    row.right:SetText(CHECK)
                 else
                     row.name:SetTextColor(0.95, 0.95, 0.95)
                     row.right:SetText(c.progress or "")
@@ -94,7 +105,7 @@ local function RefreshList()
 end
 
 local function OnMouseWheel(_, delta)
-    local maxOffset = math.max(0, VisibleCount() - NUM_ROWS)
+    local maxOffset = math.max(0, VisibleCount() - MaxVisibleRows())
     scrollOffset = math.min(maxOffset, math.max(0, scrollOffset - delta * 3))
     RefreshList()
 end
@@ -311,6 +322,7 @@ local function CreateMainFrame()
     listAnchor:SetPoint("BOTTOM", 0, 16)
     listAnchor:EnableMouseWheel(true)
     listAnchor:SetScript("OnMouseWheel", OnMouseWheel)
+    listAnchor:SetClipsChildren(true)
     detail.listAnchor = listAnchor
 
     for i = 1, NUM_ROWS do
