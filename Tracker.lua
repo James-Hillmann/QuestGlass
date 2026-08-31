@@ -67,30 +67,41 @@ local function CriteriaProgress(achID)
     return done, n
 end
 
--- One-line storyline status: the first incomplete mapped criterion's chain.
--- Returns text, questLineID (for right-click arrow).
-local function ChainLine(achID)
+-- Storyline status for a pinned achievement. Prefers the storyline the
+-- arrow is currently tracking (Chains.lastQuestLine); falls back to the
+-- first incomplete mapped criterion. Returns nil, or a table:
+--   { ql, text (one-liner), state, tracked (arrow points here) }
+local function ChainInfo(achID)
     local qlMap = NS.Chains.EnsureMap(achID)
+    local first, tracked
     for i = 1, GetAchievementNumCriteria(achID) do
         local ok, text, ctype, completed, _, _, _, _, assetID =
             pcall(GetAchievementCriteriaInfo, achID, i)
         if ok and not completed and ctype == 27 and assetID and qlMap[assetID] then
             local ql = qlMap[assetID]
-            local s = NS.Chains.State(ql)
-            if s and s.active then
-                local obj
-                for _, o in ipairs(s.active.objectives or {}) do
-                    if not o.finished then obj = o.text break end
-                end
-                return ("\194\187 %s%s"):format(s.active.name or text,
-                    obj and (" \226\128\148 " .. obj) or ""), ql
-            elseif s and s.upcoming[1] then
-                return ("\194\187 pick up %s"):format(s.upcoming[1].name or text), ql
+            first = first or { ql = ql, text = text }
+            if ql == NS.Chains.lastQuestLine then
+                tracked = { ql = ql, text = text }
+                break
             end
-            return "\194\187 " .. text, ql
         end
     end
-    return nil, nil
+    local pick = tracked or first
+    if not pick then return nil end
+
+    local s = NS.Chains.State(pick.ql)
+    local line = "\194\187 " .. pick.text
+    if s and s.active then
+        local obj
+        for _, o in ipairs(s.active.objectives or {}) do
+            if not o.finished then obj = o.text break end
+        end
+        line = ("\194\187 %s%s"):format(s.active.name or pick.text,
+            obj and (" \226\128\148 " .. obj) or "")
+    elseif s and s.upcoming[1] then
+        line = ("\194\187 pick up %s"):format(s.upcoming[1].name or pick.text)
+    end
+    return { ql = pick.ql, text = line, state = s, tracked = tracked ~= nil }
 end
 
 local function CreateStrip()
@@ -177,6 +188,38 @@ local function CreateStrip()
         row.chain:SetWordWrap(false)
         row.chain:SetTextColor(0.75, 0.75, 0.75)
 
+        -- gold accent marking the pin the arrow is tracking
+        row.accent = row:CreateTexture(nil, "ARTWORK")
+        row.accent:SetWidth(3)
+        row.accent:SetPoint("TOPLEFT", -6, -2)
+        row.accent:SetPoint("BOTTOMLEFT", -6, 2)
+        row.accent:SetColorTexture(1, 0.82, 0, 0.9)
+        row.accent:Hide()
+
+        -- storyline (per-quest) progress bar — moves much faster than the
+        -- achievement bar above it
+        row.chainBar = CreateFrame("StatusBar", nil, row)
+        row.chainBar:SetPoint("TOPLEFT", 38, -48)
+        row.chainBar:SetPoint("TOPRIGHT", -4, -48)
+        row.chainBar:SetHeight(9)
+        row.chainBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        row.chainBar:SetStatusBarColor(0.25, 0.55, 1)
+        local cbBG = row.chainBar:CreateTexture(nil, "BACKGROUND")
+        cbBG:SetAllPoints()
+        cbBG:SetColorTexture(0.1, 0.1, 0.1, 0.9)
+        row.chainBarText = row.chainBar:CreateFontString(nil, "OVERLAY")
+        row.chainBarText:SetFont(select(1, GameFontHighlightSmall:GetFont()), 9, "OUTLINE")
+        row.chainBarText:SetPoint("CENTER")
+        row.chainBar:Hide()
+
+        -- remaining quests in the tracked storyline
+        row.quests = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.quests:SetPoint("TOPLEFT", 38, -62)
+        row.quests:SetPoint("RIGHT", -4, 0)
+        row.quests:SetJustifyH("LEFT")
+        row.quests:SetSpacing(2)
+        row.quests:Hide()
+
         row.unpin = CreateFrame("Button", nil, row, "UIPanelCloseButton")
         row.unpin:SetSize(18, 18)
         row.unpin:SetPoint("TOPRIGHT", 2, -1)
@@ -220,9 +263,9 @@ function NS.RefreshTracker()
         return
     end
     if not strip then CreateStrip() end
-    strip:SetHeight(#pins * ROW_H + PAD * 2)
     strip:Show()
 
+    local yOff = 0
     for i = 1, MAX_PINS do
         local row = rows[i]
         local achID = pins[i]
@@ -232,22 +275,68 @@ function NS.RefreshTracker()
             local _, name, _, completed, _, _, _, _, _, icon = GetAchievementInfo(achID)
             row.achID = achID
             row:Show()
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", PAD, -PAD - yOff)
+            row:SetPoint("TOPRIGHT", -PAD, -PAD - yOff)
             row.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
             row.name:SetText(name or ("Achievement " .. achID))
             local done, total = CriteriaProgress(achID)
             row.bar:SetMinMaxValues(0, total)
             row.bar:SetValue(completed and total or done)
             row.barText:SetFormattedText("%d / %d", completed and total or done, total)
+
+            local rowH = ROW_H
+            local info = not completed and ChainInfo(achID) or nil
+            row.questLineID = info and info.ql or nil
+
             if completed then
                 row.name:SetTextColor(0.6, 1, 0.6)
                 row.chain:SetText("Complete!")
-                row.questLineID = nil
             else
                 row.name:SetTextColor(1, 0.82, 0)
-                local line, ql = ChainLine(achID)
-                row.chain:SetText(line or ("%d / %d criteria"):format(done, total))
-                row.questLineID = ql
+                row.chain:SetText(info and info.text
+                    or ("%d / %d criteria"):format(done, total))
             end
+
+            local s = info and info.tracked and info.state
+            if s then
+                -- expanded: the arrow tracks this storyline
+                row.accent:Show()
+                row.chainBar:SetMinMaxValues(0, s.total)
+                row.chainBar:SetValue(s.done)
+                row.chainBarText:SetFormattedText("%d / %d quests", s.done, s.total)
+                row.chainBar:Show()
+
+                local lines, shown = {}, 0
+                if s.active then
+                    lines[#lines + 1] = ("|cff33ff66\194\187 %s|r")
+                        :format(s.active.name or "(loading\226\128\166)")
+                    shown = shown + 1
+                end
+                for _, u in ipairs(s.upcoming) do
+                    if shown >= 4 then
+                        local left = (s.active and 1 or 0) + #s.upcoming - shown
+                        if left > 0 then
+                            lines[#lines + 1] = ("|cff666666   +%d more|r"):format(left)
+                        end
+                        break
+                    end
+                    lines[#lines + 1] = ("|cff999999   %s|r")
+                        :format(u.name or "(loading\226\128\166)")
+                    shown = shown + 1
+                end
+                row.quests:SetText(table.concat(lines, "\n"))
+                row.quests:Show()
+                rowH = 64 + math.max(12, row.quests:GetStringHeight()) + 4
+            else
+                row.accent:Hide()
+                row.chainBar:Hide()
+                row.quests:Hide()
+            end
+
+            row:SetHeight(rowH)
+            yOff = yOff + rowH
         end
     end
+    strip:SetHeight(yOff + PAD * 2)
 end
