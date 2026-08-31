@@ -31,8 +31,10 @@ Full product spec lives in [project_description.md](project_description.md).
   `QUEST_DATA_LOAD_RESULT`
 
 **P2 leftovers:**
-- [ ] Test in-game: automap hit rate on Sojourner achievements, waypoint
-  accuracy for both started and unstarted chains, auto-advance
+- [x] Tested in-game 2026-08-30: automap resolves Harandar storylines,
+  TomTom arrow works for the active quest
+- [ ] Verify: auto-advance after a quest turn-in, and the unstarted-chain
+  giver arrow (Bloomtown path)
 - [ ] Faction-variant chains (e.g. 90546/90547): treat either variant
   completed as done
 - [ ] Populate `Overrides.lua` for whatever automap misses
