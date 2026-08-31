@@ -218,13 +218,16 @@ local function RenderChainInfo(c)
     local lines = {
         ("|cffffd100Storyline:|r %d/%d quests complete"):format(s.done, s.total),
     }
-    if s.active then
-        local obj
-        for _, o in ipairs(s.active.objectives or {}) do
-            if not o.finished then obj = o.text break end
+    if #s.actives > 0 then
+        for _, a in ipairs(s.actives) do
+            lines[#lines + 1] = ("|cff33ff66Now:|r %s"):format(
+                a.name or "(loading\226\128\166)")
+            for _, o in ipairs(a.objectives or {}) do
+                if not o.finished and o.text and o.text ~= "" then
+                    lines[#lines + 1] = "|cffbbbbbb      " .. o.text .. "|r"
+                end
+            end
         end
-        lines[#lines + 1] = ("|cff33ff66Now:|r %s%s"):format(
-            s.active.name or "(loading\226\128\166)", obj and (" \226\128\148 " .. obj) or "")
     elseif s.upcoming[1] then
         lines[#lines + 1] = ("|cff33ff66Next:|r pick up %s"):format(
             s.upcoming[1].name or "(loading\226\128\166)")
@@ -232,7 +235,7 @@ local function RenderChainInfo(c)
         lines[#lines + 1] = "|cff33ff66All quests turned in.|r"
     end
     local upNames = {}
-    local first = s.active and 1 or 2
+    local first = (#s.actives > 0) and 1 or 2
     for i = first, math.min(first + 1, #s.upcoming) do
         upNames[#upNames + 1] = s.upcoming[i].name or "(loading\226\128\166)"
     end
@@ -240,7 +243,8 @@ local function RenderChainInfo(c)
         lines[#lines + 1] = "|cff999999Then:|r " .. table.concat(upNames, ", ")
     end
     detail.chainText:SetText(table.concat(lines, "\n"))
-    detail.pane:SetHeight(152)
+    -- grow the header pane to fit the full, wrapped text
+    detail.pane:SetHeight(96 + detail.chainText:GetStringHeight() + 8)
 end
 
 -- Click on a » criterion: track that storyline and point the arrow.
@@ -486,6 +490,7 @@ local function CreateMainFrame()
     detail.chainText:SetPoint("RIGHT", pane, "RIGHT", 0, 0)
     detail.chainText:SetJustifyH("LEFT")
     detail.chainText:SetSpacing(3)
+    detail.chainText:SetWordWrap(true)
 
     -- Shared list rows
     local listTop = -110 -- overridden per view via anchor frame

@@ -107,13 +107,16 @@ function Chains.State(questLineID)
     local ok, quests = pcall(C_QuestLine.GetQuestLineQuests, questLineID)
     if not ok or not quests or #quests == 0 then return nil end
     local s = { questLineID = questLineID, total = #quests, done = 0,
-                active = nil, upcoming = {} }
+                active = nil, actives = {}, upcoming = {} }
     for i, q in ipairs(quests) do
         if C_QuestLog.IsQuestFlaggedCompleted(q) then
             s.done = s.done + 1
-        elseif C_QuestLog.IsOnQuest(q) and not s.active then
-            s.active = { index = i, id = q, name = Chains.QuestName(q),
-                         objectives = C_QuestLog.GetQuestObjectives(q) }
+        elseif C_QuestLog.IsOnQuest(q) then
+            -- chains can hand out several quests at once; keep them all
+            local a = { index = i, id = q, name = Chains.QuestName(q),
+                        objectives = C_QuestLog.GetQuestObjectives(q) }
+            s.actives[#s.actives + 1] = a
+            s.active = s.active or a
         else
             s.upcoming[#s.upcoming + 1] =
                 { index = i, id = q, name = Chains.QuestName(q) }

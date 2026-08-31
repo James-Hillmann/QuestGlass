@@ -207,9 +207,10 @@ local function CreateStrip()
 
         -- storyline (per-quest) progress bar — moves much faster than the
         -- achievement bar above it
+        -- when expanded, the chain bar replaces the one-line summary
         row.chainBar = CreateFrame("StatusBar", nil, row)
-        row.chainBar:SetPoint("TOPLEFT", 38, -48)
-        row.chainBar:SetPoint("TOPRIGHT", -4, -48)
+        row.chainBar:SetPoint("TOPLEFT", 38, -33)
+        row.chainBar:SetPoint("TOPRIGHT", -4, -33)
         row.chainBar:SetHeight(9)
         row.chainBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
         row.chainBar:SetStatusBarColor(0.25, 0.55, 1)
@@ -223,10 +224,11 @@ local function CreateStrip()
 
         -- remaining quests in the tracked storyline
         row.quests = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.quests:SetPoint("TOPLEFT", 38, -62)
+        row.quests:SetPoint("TOPLEFT", 38, -47)
         row.quests:SetPoint("RIGHT", -4, 0)
         row.quests:SetJustifyH("LEFT")
         row.quests:SetSpacing(2)
+        row.quests:SetWordWrap(true)
         row.quests:Hide()
 
         row.unpin = CreateFrame("Button", nil, row, "UIPanelCloseButton")
@@ -327,7 +329,9 @@ function NS.RefreshTracker()
 
             local s = info and info.tracked and info.state
             if s then
-                -- expanded: the arrow tracks this storyline
+                -- expanded: the arrow tracks this storyline. The one-line
+                -- summary is replaced by the full quest list + objectives.
+                row.chain:Hide()
                 row.accent:Show()
                 row.chainBar:SetMinMaxValues(0, s.total)
                 row.chainBar:SetValue(s.done)
@@ -335,14 +339,19 @@ function NS.RefreshTracker()
                 row.chainBar:Show()
 
                 local lines, shown = {}, 0
-                if s.active then
+                for _, a in ipairs(s.actives) do
                     lines[#lines + 1] = ("|cff33ff66\194\187 %s|r")
-                        :format(s.active.name or "(loading\226\128\166)")
+                        :format(a.name or "(loading\226\128\166)")
+                    for _, o in ipairs(a.objectives or {}) do
+                        if not o.finished and o.text and o.text ~= "" then
+                            lines[#lines + 1] = "|cffaaaaaa      " .. o.text .. "|r"
+                        end
+                    end
                     shown = shown + 1
                 end
                 for _, u in ipairs(s.upcoming) do
                     if shown >= 4 then
-                        local left = (s.active and 1 or 0) + #s.upcoming - shown
+                        local left = #s.actives + #s.upcoming - shown
                         if left > 0 then
                             lines[#lines + 1] = ("|cff666666   +%d more|r"):format(left)
                         end
@@ -354,8 +363,9 @@ function NS.RefreshTracker()
                 end
                 row.quests:SetText(table.concat(lines, "\n"))
                 row.quests:Show()
-                rowH = 64 + math.max(12, row.quests:GetStringHeight()) + 4
+                rowH = 49 + math.max(12, row.quests:GetStringHeight()) + 5
             else
+                row.chain:Show()
                 row.accent:Hide()
                 row.chainBar:Hide()
                 row.quests:Hide()
