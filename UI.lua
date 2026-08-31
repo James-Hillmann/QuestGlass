@@ -190,7 +190,12 @@ local function RenderDetail()
     if done then
         detail.bar:SetMinMaxValues(0, total)
         detail.bar:SetValue(done)
-        detail.barText:SetFormattedText("%d / %d", done, total)
+        if done >= total and not completed then
+            -- all visible criteria done but not awarded (hidden requirements)
+            detail.barText:SetFormattedText("%d / %d \194\183 not yet awarded", done, total)
+        else
+            detail.barText:SetFormattedText("%d / %d", done, total)
+        end
     else
         detail.bar:SetMinMaxValues(0, 1)
         detail.bar:SetValue(completed and 1 or 0)
