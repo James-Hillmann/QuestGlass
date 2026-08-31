@@ -35,8 +35,8 @@ end
 -- Rows (shared virtual list)
 ------------------------------------------------------------------------
 
--- ✓ as text isn't in WoW's default font; use the ready-check texture instead
-local CHECK = "|TInterface\\RaidFrames\\ReadyCheck-Ready:14|t"
+-- ✓ as text isn't in WoW's default font; use the green ready-check atlas
+local CHECK = "|A:UI-LFG-ReadyMark:12:12|a"
 
 local function VisibleCount()
     return currentView == "search" and #currentResults or #detailCriteria
@@ -72,7 +72,7 @@ local function RefreshList()
                 row.name:SetText(e.name)
                 if e.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
-                    row.right:SetText(e.points .. "p " .. CHECK)
+                    row.right:SetText(CHECK)
                 else
                     row.name:SetTextColor(1, 0.9, 0.5)
                     local p = NS.ProgressPct(e.id)
@@ -83,9 +83,9 @@ local function RefreshList()
                         elseif pct >= 50 then color = "ffffd100"  -- halfway: gold
                         elseif pct > 0 then color = "ffdddddd"    -- started: white
                         else color = "ff707070" end               -- untouched: dim
-                        row.right:SetFormattedText("%dp \194\183 |c%s%d%%|r", e.points, color, pct)
+                        row.right:SetFormattedText("|c%s%d%%|r", color, pct)
                     else
-                        row.right:SetFormattedText("%dp", e.points)
+                        row.right:SetText("")
                     end
                 end
             else
@@ -374,7 +374,7 @@ local function CreateMainFrame()
 
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         row.name:SetPoint("LEFT", 34, 0)
-        row.name:SetPoint("RIGHT", -90, 0)
+        row.name:SetPoint("RIGHT", -48, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
 
