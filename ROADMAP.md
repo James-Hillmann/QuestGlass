@@ -39,15 +39,18 @@ Full product spec lives in [project_description.md](project_description.md).
   completed as done
 - [ ] Populate `Overrides.lua` for whatever automap misses
 
-## ⬜ P3 — Tracker strip + polish
+## 🔶 P3 — Tracker strip (built 2026-08-30, needs in-game testing)
 
-- Compact pinned panel (1–3 achievements): name, bar, active chain line
-- `/qg pin <achID>`, `/qg way`
-- Once pinning exists, restore easy-close on the main window (ESC /
-  UISpecialFrames): the pinned strip carries the tracking, so the big
-  window no longer needs to stay open. (James, 2026-08-30 — current
-  sticky-window behavior is a stopgap because the main window is the
-  only tracker.)
+- ✅ Compact pinned strip (1–3 achievements): name, bar, live chain line;
+  left-click opens detail, right-click re-points arrow, drag to move,
+  per-row unpin, auto-unpin (with grats) on earn, pins persist
+- ✅ Pin button in the detail view + `/qg pin <achID>`
+- ✅ Easy-close restored on the main window (ESC / UISpecialFrames) now
+  that the strip carries the tracking (James's 2026-08-30 request)
+
+**P3 leftovers:**
+- [ ] Test in-game; saved scale option if wanted (`/qg scale`)
+- [ ] Real scrollbar on lists (nice-to-have)
 - Saved scale, name-cache warming, general polish (scrollbar for the list)
 
 ## ⬜ P4 — More data

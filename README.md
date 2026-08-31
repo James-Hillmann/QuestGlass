@@ -36,6 +36,7 @@ only if you changed the `.toc`.
 |---|---|
 | `/qg` | Toggle the window (search box auto-focused) |
 | `/qg <text>` | Open with a search already run, e.g. `/qg sojourner` |
+| `/qg pin <achID>` | Pin/unpin an achievement (easier: the Pin button in the detail view) |
 | `/qg way` | Re-point the arrow at the tracked storyline |
 | `/qg automap <achID>` | Debug: show quest→questline mapping for an achievement |
 | `/qg rebuild` | Force a full index rebuild (normally automatic per patch) |
@@ -52,8 +53,14 @@ only if you changed the `.toc`.
   and the arrow (TomTom if installed, otherwise Blizzard's map pin) points at
   the right spot for your progress. It advances automatically as you turn
   quests in.
-- The window stays open until you click the X (or `/qg` again) — ESC only
-  unfocuses the search box. Drag anywhere to move; position is saved.
+- **Pin** up to 3 achievements (button in the detail view) to a compact
+  tracker strip that stays on screen: name, progress bar, and the live
+  storyline step. Left-click a row to open it, right-click to re-point the
+  arrow, drag to move; the X on a row unpins. Earned achievements unpin
+  themselves. Pins persist across sessions.
+- ESC closes the window (first ESC unfocuses the search box if you're
+  typing) — the strip keeps your place. Drag anywhere to move; position is
+  saved.
 
 ## Troubleshooting
 

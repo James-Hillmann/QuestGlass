@@ -250,6 +250,7 @@ local function RenderDetail()
     if not name then return end
 
     detail.icon:SetTexture(icon)
+    detail.pinBtn:SetText(NS.IsPinned(detailAchID) and "Unpin" or "Pin")
     detail.name:SetText(name)
     detail.name:SetTextColor(completed and 0.6 or 1, completed and 1 or 0.82, completed and 0.6 or 0)
     detail.desc:SetText(description or "")
@@ -373,6 +374,10 @@ local function CreateMainFrame()
         frame:SetPoint("CENTER")
     end
 
+    -- The pinned tracker strip holds the user's place now, so the big
+    -- window can close easily again (see ROADMAP: P3 design note)
+    tinsert(UISpecialFrames, "QuestGlassFrame")
+
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", 0, -16)
     title:SetText("QuestGlass")
@@ -413,6 +418,15 @@ local function CreateMainFrame()
     back:SetPoint("TOPLEFT", 0, 0)
     back:SetText("< Back")
     back:SetScript("OnClick", function() ShowSearch(false) end)
+
+    detail.pinBtn = CreateFrame("Button", nil, pane, "UIPanelButtonTemplate")
+    detail.pinBtn:SetSize(60, 20)
+    detail.pinBtn:SetPoint("TOPRIGHT", 0, 0)
+    detail.pinBtn:SetScript("OnClick", function(self)
+        if not detailAchID then return end
+        NS.TogglePin(detailAchID)
+        self:SetText(NS.IsPinned(detailAchID) and "Unpin" or "Pin")
+    end)
 
     detail.icon = pane:CreateTexture(nil, "ARTWORK")
     detail.icon:SetSize(36, 36)
@@ -547,6 +561,13 @@ function NS.OpenWithQuery(query)
     detail.pane:Hide()
     searchBox:SetText(query)
     RunSearch()
+end
+
+-- Open straight to an achievement's detail view (used by the tracker strip)
+function NS.OpenAchievement(achID)
+    if not frame then CreateMainFrame() end
+    frame:Show()
+    ShowDetail(achID)
 end
 
 -- Reopen the window exactly as it was before a /reload or logout

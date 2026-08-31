@@ -11,3 +11,4 @@ Overrides.lua
 Search.lua
 Chains.lua
 UI.lua
+Tracker.lua

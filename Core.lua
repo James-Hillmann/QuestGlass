@@ -24,17 +24,20 @@ local onCriteriaUpdate = NS.Debounce(0.75, function()
     NS.InvalidateProgress()
     NS.StartProgressScan()
     if NS.RefreshOpenViews then NS.RefreshOpenViews() end
+    if NS.RefreshTracker then NS.RefreshTracker() end
 end)
 
 -- Quest line / quest name data arrived: re-render open views
 local onQuestData = NS.Debounce(0.5, function()
     if NS.RefreshOpenViews then NS.RefreshOpenViews() end
+    if NS.RefreshTracker then NS.RefreshTracker() end
 end)
 
 -- Quest turned in or objectives progressed: advance the arrow
 local onQuestAdvance = NS.Debounce(1, function()
     NS.Chains.RefreshWaypoint()
     if NS.RefreshOpenViews then NS.RefreshOpenViews() end
+    if NS.RefreshTracker then NS.RefreshTracker() end
 end)
 
 events:SetScript("OnEvent", function(_, event, arg1)
@@ -50,8 +53,10 @@ events:SetScript("OnEvent", function(_, event, arg1)
         events:RegisterEvent("QUEST_TURNED_IN")
         events:RegisterEvent("QUEST_WATCH_UPDATE")
         NS.RestoreSession() -- reopen where the user was before /reload
+        NS.RefreshTracker() -- restore pinned tracker strip
     elseif event == "ACHIEVEMENT_EARNED" then
         NS.MarkAchievementEarned(arg1)
+        NS.UnpinIfEarned(arg1)
         onCriteriaUpdate()
     elseif event == "CRITERIA_UPDATE" then
         onCriteriaUpdate()
@@ -75,6 +80,21 @@ SlashCmdList.QUESTGLASS = function(msg)
             print("|cff7fd5ffQuestGlass:|r " .. (text or ("no arrow: " .. err)))
         else
             print("|cff7fd5ffQuestGlass:|r nothing tracked yet — open an achievement and click a \194\187 storyline first.")
+        end
+    elseif msg:match("^pin") then
+        local achID = tonumber(msg:match("^pin%s+(%d+)"))
+        if not achID then
+            print("|cff7fd5ffQuestGlass:|r usage: /qg pin <achievementID> (or use the Pin button in the detail view)")
+            return
+        end
+        local name = select(2, GetAchievementInfo(achID))
+        if not name then
+            print("|cff7fd5ffQuestGlass:|r unknown achievement id " .. achID)
+            return
+        end
+        local pinned = NS.TogglePin(achID)
+        if pinned ~= nil then
+            print(("|cff7fd5ffQuestGlass:|r %s %s"):format(name, pinned and "pinned" or "unpinned"))
         end
     elseif msg:match("^automap%s+%d+$") then
         local achID = tonumber(msg:match("%d+"))
