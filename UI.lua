@@ -77,7 +77,9 @@ local function RefreshList()
                     row.name:SetTextColor(1, 0.9, 0.5)
                     local p = NS.ProgressPct(e.id)
                     if p then
-                        local pct = math.floor(p * 100 + 0.5)
+                        -- floor, and never show 100% on an incomplete achievement
+                        -- (hidden criteria can make all visible ones read done)
+                        local pct = math.min(99, math.floor(p * 100))
                         local color
                         if pct >= 80 then color = "ff33ff66"      -- almost done: green
                         elseif pct >= 50 then color = "ffffd100"  -- halfway: gold
