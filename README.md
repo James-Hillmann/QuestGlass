@@ -38,6 +38,8 @@ only if you changed the `.toc`.
 | `/qg <text>` | Open with a search already run, e.g. `/qg sojourner` |
 | `/qg rebuild` | Force a full index rebuild (normally automatic per patch) |
 
+- With an empty search box, the window shows your "closest to completion"
+  list — every in-progress achievement, best first.
 - Results rank incomplete achievements first, then by match quality.
 - Matches criteria names too: searching a quest name finds the meta-achievement
   that requires it.
