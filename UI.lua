@@ -222,6 +222,7 @@ local function CreateMainFrame()
         tile = true, tileSize = 32, edgeSize = 32,
         insets = { left = 10, right = 10, top = 10, bottom = 10 },
     })
+    frame:Hide() -- frames are shown by default; ToggleUI decides visibility
     frame:SetFrameStrata("HIGH")
     frame:SetMovable(true)
     frame:EnableMouse(true)
