@@ -151,17 +151,38 @@ function Chains.SetWaypoint(questLineID)
     Chains.lastQuestLine = questLineID
 
     if s.active then
-        local mapID, x, y = C_QuestLog.GetNextWaypoint(s.active.id)
-        if not mapID then
-            local pm = C_Map.GetBestMapForUnit("player")
-            if pm then
-                local _, px, py = QuestPOIGetIconInfo(s.active.id)
-                if px then mapID, x, y = pm, px, py end
+        -- Waypoint APIs vary by client build; feature-detect each in turn
+        local mapID, x, y
+        if C_QuestLog.GetNextWaypoint then
+            mapID, x, y = C_QuestLog.GetNextWaypoint(s.active.id)
+        end
+        local pm = C_Map.GetBestMapForUnit("player")
+        if not mapID and pm and C_QuestLog.GetNextWaypointForMap then
+            local wx, wy = C_QuestLog.GetNextWaypointForMap(s.active.id, pm)
+            if wx then mapID, x, y = pm, wx, wy end
+        end
+        if not mapID and pm and C_QuestLog.GetQuestsOnMap then
+            -- modern replacement for QuestPOIGetIconInfo (removed in 12.x)
+            for _, q in ipairs(C_QuestLog.GetQuestsOnMap(pm) or {}) do
+                if q.questID == s.active.id then
+                    mapID, x, y = pm, q.x, q.y
+                    break
+                end
             end
+        end
+        if not mapID and pm and QuestPOIGetIconInfo then
+            local _, px, py = QuestPOIGetIconInfo(s.active.id)
+            if px then mapID, x, y = pm, px, py end
         end
         local title = s.active.name or ("Quest " .. s.active.index)
         if PlaceWaypoint(mapID, x, y, title) then
             return ("arrow \226\134\146 %s (quest %d/%d)")
+                :format(title, s.active.index, s.total)
+        end
+        -- last resort: let Blizzard's own tracker navigate to the quest
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+            C_SuperTrack.SetSuperTrackedQuestID(s.active.id)
+            return ("super-tracking %s (quest %d/%d)")
                 :format(title, s.active.index, s.total)
         end
         return nil, "no waypoint data for the active quest (try opening the world map first)"

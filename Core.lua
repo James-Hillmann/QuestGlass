@@ -74,7 +74,7 @@ SlashCmdList.QUESTGLASS = function(msg)
             local text, err = NS.Chains.SetWaypoint(NS.Chains.lastQuestLine)
             print("|cff7fd5ffQuestGlass:|r " .. (text or ("no arrow: " .. err)))
         else
-            print("|cff7fd5ffQuestGlass:|r nothing tracked yet — open an achievement and click a \226\150\182 storyline first.")
+            print("|cff7fd5ffQuestGlass:|r nothing tracked yet — open an achievement and click a \194\187 storyline first.")
         end
     elseif msg:match("^automap%s+%d+$") then
         local achID = tonumber(msg:match("%d+"))

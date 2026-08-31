@@ -99,7 +99,7 @@ local function RefreshList()
                 row.icon:Hide()
                 row.name:SetPoint("LEFT", 4, 0)
                 local prefix = (c.questLineID and not c.completed)
-                    and "|cffffd100\226\150\182|r " or ""
+                    and "|cffffd100\194\187|r " or "" -- » (▶ isn't in the font)
                 row.name:SetText(prefix .. c.text)
                 if c.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
