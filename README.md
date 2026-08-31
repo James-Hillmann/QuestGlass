@@ -38,6 +38,7 @@ only if you changed the `.toc`.
 | `/qg <text>` | Open with a search already run, e.g. `/qg sojourner` |
 | `/qg pin <achID>` | Pin/unpin an achievement (easier: the Pin button in the detail view) |
 | `/qg way` | Re-point the arrow at the tracked storyline |
+| `/qg way off` | Clear the arrow and stop tracking (or click the tracked » again) |
 | `/qg automap <achID>` | Debug: show quest→questline mapping for an achievement |
 | `/qg options` | Open the options panel (scales, strip lock, combat hide) |
 | `/qg rebuild` | Force a full index rebuild (normally automatic per patch) |

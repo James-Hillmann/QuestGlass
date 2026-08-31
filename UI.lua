@@ -243,12 +243,24 @@ local function RenderChainInfo(c)
     detail.pane:SetHeight(152)
 end
 
--- Click on a ▶ criterion: track that storyline and point the arrow
+-- Click on a » criterion: track that storyline and point the arrow.
+-- Clicking the already-tracked one stops tracking instead.
 local function SelectChain(c)
+    if selectedQuestLine == c.questLineID
+        and NS.Chains.lastQuestLine == c.questLineID then
+        NS.Chains.ClearWaypoint()
+        selectedQuestLine = nil
+        print("|cff7fd5ffQuestGlass:|r stopped tracking " .. c.text)
+        RenderChainInfo(nil)
+        if NS.RefreshTracker then NS.RefreshTracker() end
+        RefreshList()
+        return
+    end
     selectedQuestLine = c.questLineID
     local text, err = NS.Chains.SetWaypoint(c.questLineID)
     print("|cff7fd5ffQuestGlass:|r " .. (text or ("no arrow: " .. (err or "unknown"))))
     RenderChainInfo(c)
+    if NS.RefreshTracker then NS.RefreshTracker() end
     RefreshList()
 end
 

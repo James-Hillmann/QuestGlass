@@ -110,7 +110,14 @@ events:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "QUESTLINE_UPDATE" or event == "QUEST_DATA_LOAD_RESULT" then
         onQuestData()
     elseif event == "QUEST_TURNED_IN" or event == "QUEST_WATCH_UPDATE" then
-        onQuestAdvance()
+        -- Only touch the arrow for quests in the tracked chain; anything
+        -- else (farming, world quests) just refreshes the visible views.
+        if NS.Chains.lastQuestLine and arg1
+            and NS.Chains.IsChainQuest(NS.Chains.lastQuestLine, arg1) then
+            onQuestAdvance()
+        else
+            onQuestData()
+        end
     end
 end)
 
@@ -121,6 +128,10 @@ SlashCmdList.QUESTGLASS = function(msg)
     if msg == "rebuild" then
         print("|cff7fd5ffQuestGlass:|r rebuilding achievement index…")
         NS.StartIndexBuild(true)
+    elseif msg == "way off" then
+        NS.Chains.ClearWaypoint()
+        if NS.RefreshTracker then NS.RefreshTracker() end
+        print("|cff7fd5ffQuestGlass:|r arrow cleared, tracking stopped.")
     elseif msg == "way" then
         if NS.Chains.lastQuestLine then
             local text, err = NS.Chains.SetWaypoint(NS.Chains.lastQuestLine)

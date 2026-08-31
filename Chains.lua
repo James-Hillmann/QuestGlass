@@ -123,6 +123,7 @@ function Chains.State(questLineID)
 end
 
 local lastTomTomUID
+local lastMethod
 
 -- Returns the method used ("TomTom" / "map pin") or nil.
 local function PlaceWaypoint(mapID, x, y, title)
@@ -135,15 +136,47 @@ local function PlaceWaypoint(mapID, x, y, title)
             { title = title, from = "QuestGlass" })
         if ok and uid then
             lastTomTomUID = uid
+            lastMethod = "TomTom"
             return "TomTom"
         end
     end
     if C_Map.CanSetUserWaypointOnMap(mapID) then
         C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))
         C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+        lastMethod = "map pin"
         return "map pin"
     end
     return nil
+end
+
+-- Stop tracking: remove our arrow/pin and forget the chain.
+function Chains.ClearWaypoint()
+    if lastTomTomUID and TomTom then
+        pcall(TomTom.RemoveWaypoint, TomTom, lastTomTomUID)
+        lastTomTomUID = nil
+    end
+    if lastMethod == "map pin" then
+        if C_Map.ClearUserWaypoint then C_Map.ClearUserWaypoint() end
+    end
+    lastMethod = nil
+    Chains.lastQuestLine = nil
+    Chains.lastSignature = nil
+end
+
+-- Is this quest part of the given quest line?
+function Chains.IsChainQuest(questLineID, questID)
+    local ok, quests = pcall(C_QuestLine.GetQuestLineQuests, questLineID)
+    if not ok or not quests then return false end
+    for _, q in ipairs(quests) do
+        if q == questID then return true end
+    end
+    return false
+end
+
+local function StateSignature(s)
+    return ("%d:%d:%d"):format(s.questLineID,
+        s.active and s.active.id or (s.upcoming[1] and s.upcoming[1].id or 0),
+        s.done)
 end
 
 -- Point the arrow at the right spot for a chain given actual progress:
@@ -153,6 +186,7 @@ function Chains.SetWaypoint(questLineID)
     local s = Chains.State(questLineID)
     if not s then return nil, "quest line data not loaded yet" end
     Chains.lastQuestLine = questLineID
+    Chains.lastSignature = StateSignature(s)
 
     if s.active then
         -- Put the quest in the objective tracker and select it
@@ -241,8 +275,13 @@ function Chains.SetWaypoint(questLineID)
 end
 
 -- Re-point the arrow after quest turn-in / progress (auto-advance).
+-- Only acts when the tracked chain actually moved to a new step, so
+-- unrelated quest spam (farming, world quests) never re-places the arrow.
 function Chains.RefreshWaypoint()
     if not Chains.lastQuestLine then return end
+    local s = Chains.State(Chains.lastQuestLine)
+    if not s then return end
+    if StateSignature(s) == Chains.lastSignature then return end
     local msg = Chains.SetWaypoint(Chains.lastQuestLine)
     if msg then
         print("|cff7fd5ffQuestGlass:|r " .. msg)
