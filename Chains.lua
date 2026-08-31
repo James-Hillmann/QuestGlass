@@ -151,6 +151,15 @@ function Chains.SetWaypoint(questLineID)
     Chains.lastQuestLine = questLineID
 
     if s.active then
+        -- Put the quest in the objective tracker and select it
+        if C_QuestLog.AddQuestWatch then
+            pcall(C_QuestLog.AddQuestWatch, s.active.id)
+        end
+        local tracked = false
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
+            C_SuperTrack.SetSuperTrackedQuestID(s.active.id)
+            tracked = true
+        end
         -- Waypoint APIs vary by client build; feature-detect each in turn
         local mapID, x, y
         if C_QuestLog.GetNextWaypoint then
@@ -175,15 +184,11 @@ function Chains.SetWaypoint(questLineID)
             if px then mapID, x, y = pm, px, py end
         end
         local title = s.active.name or ("Quest " .. s.active.index)
-        if PlaceWaypoint(mapID, x, y, title) then
-            return ("arrow \226\134\146 %s (quest %d/%d)")
-                :format(title, s.active.index, s.total)
-        end
-        -- last resort: let Blizzard's own tracker navigate to the quest
-        if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID then
-            C_SuperTrack.SetSuperTrackedQuestID(s.active.id)
-            return ("super-tracking %s (quest %d/%d)")
-                :format(title, s.active.index, s.total)
+        local arrow = PlaceWaypoint(mapID, x, y, title)
+        if arrow or tracked then
+            return ("%s %s (quest %d/%d)"):format(
+                arrow and "arrow \226\134\146" or "tracking", title,
+                s.active.index, s.total)
         end
         return nil, "no waypoint data for the active quest (try opening the world map first)"
     end
