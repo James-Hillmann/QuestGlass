@@ -33,6 +33,11 @@ Full product spec lives in [project_description.md](project_description.md).
 
 - Compact pinned panel (1–3 achievements): name, bar, active chain line
 - `/qg pin <achID>`, `/qg way`
+- Once pinning exists, restore easy-close on the main window (ESC /
+  UISpecialFrames): the pinned strip carries the tracking, so the big
+  window no longer needs to stay open. (James, 2026-08-30 — current
+  sticky-window behavior is a stopgap because the main window is the
+  only tracker.)
 - Saved scale, name-cache warming, general polish (scrollbar for the list)
 
 ## ⬜ P4 — More data
