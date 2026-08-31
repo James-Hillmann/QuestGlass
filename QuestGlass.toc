@@ -1,0 +1,11 @@
+## Interface: 120100
+## Title: QuestGlass
+## Notes: Fast achievement search, progress browser & chain tracker
+## Author: James
+## Version: 0.1.0
+## SavedVariables: QuestGlassDB
+## IconTexture: Interface\Icons\Achievement_Quests_Completed_08
+
+Core.lua
+Search.lua
+UI.lua
