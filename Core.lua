@@ -32,6 +32,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
         NS.StartIndexBuild(false)
         events:RegisterEvent("ACHIEVEMENT_EARNED")
         events:RegisterEvent("CRITERIA_UPDATE")
+        NS.RestoreSession() -- reopen where the user was before /reload
     elseif event == "ACHIEVEMENT_EARNED" then
         NS.MarkAchievementEarned(arg1)
         onCriteriaUpdate()

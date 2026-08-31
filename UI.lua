@@ -18,6 +18,8 @@ local detailCriteria = {}   -- built when a detail view opens
 -- Detail widgets
 local detail = {}
 
+local RunSearch -- forward declaration (defined under "Search plumbing")
+
 local function AchProgress(achID)
     local n = GetAchievementNumCriteria(achID)
     if n == 0 then return nil end
@@ -178,24 +180,29 @@ local function ShowDetail(achID)
     currentView = "detail"
     detailAchID = achID
     scrollOffset = 0
+    QuestGlassDB.ui.view = "detail"
+    QuestGlassDB.ui.detailID = achID
     detail.pane:Show()
     RenderDetail()
 end
 
-local function ShowSearch()
+local function ShowSearch(skipFocus)
     currentView = "search"
     detailAchID = nil
     scrollOffset = 0
+    QuestGlassDB.ui.view = "search"
+    QuestGlassDB.ui.detailID = nil
     detail.pane:Hide()
+    RunSearch()
     RefreshList()
-    searchBox:SetFocus()
+    if not skipFocus then searchBox:SetFocus() end
 end
 
 ------------------------------------------------------------------------
 -- Search plumbing
 ------------------------------------------------------------------------
 
-local function RunSearch()
+function RunSearch()
     if not NS.indexReady then return end
     currentResults = NS.Search(searchBox:GetText())
     scrollOffset = 0
@@ -203,7 +210,8 @@ local function RunSearch()
 end
 
 local queueSearch
-local function OnSearchChanged()
+local function OnSearchChanged(self)
+    QuestGlassDB.ui.query = self:GetText()
     if not queueSearch then
         queueSearch = NS.Debounce(0.15, function()
             if frame and frame:IsShown() and currentView == "search" then
@@ -233,6 +241,9 @@ local function CreateMainFrame()
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
     frame:RegisterForDrag("LeftButton")
+    -- Remember open/closed across /reload (SavedVariables)
+    frame:SetScript("OnShow", function() QuestGlassDB.ui.open = true end)
+    frame:SetScript("OnHide", function() QuestGlassDB.ui.open = false end)
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
@@ -286,7 +297,7 @@ local function CreateMainFrame()
     back:SetSize(60, 20)
     back:SetPoint("TOPLEFT", 0, 0)
     back:SetText("< Back")
-    back:SetScript("OnClick", ShowSearch)
+    back:SetScript("OnClick", function() ShowSearch(false) end)
 
     detail.icon = pane:CreateTexture(nil, "ARTWORK")
     detail.icon:SetSize(36, 36)
@@ -404,6 +415,22 @@ function NS.OpenWithQuery(query)
     detail.pane:Hide()
     searchBox:SetText(query)
     RunSearch()
+end
+
+-- Reopen the window exactly as it was before a /reload or logout
+function NS.RestoreSession()
+    local ui = QuestGlassDB.ui
+    if not ui.open then return end
+    if not frame then CreateMainFrame() end
+    frame:Show()
+    if ui.query and ui.query ~= "" then
+        searchBox:SetText(ui.query)
+    end
+    if ui.view == "detail" and ui.detailID then
+        ShowDetail(ui.detailID)
+    else
+        ShowSearch(true) -- don't steal keyboard focus on login
+    end
 end
 
 function NS.OnIndexProgress(done, total)
