@@ -22,6 +22,7 @@ events:RegisterEvent("PLAYER_LOGIN")
 
 local onCriteriaUpdate = NS.Debounce(0.75, function()
     NS.InvalidateProgress()
+    NS.StartProgressScan()
     if NS.RefreshOpenViews then NS.RefreshOpenViews() end
 end)
 

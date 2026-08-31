@@ -109,7 +109,15 @@ local function RefreshList()
         if not NS.indexReady then
             -- status handled by OnIndexProgress
         elseif searchBox:GetText() == "" then
-            statusText:SetText("Type to search " .. #NS.index .. " achievements")
+            if count == 0 then
+                statusText:SetText("Type to search " .. #NS.index .. " achievements")
+            elseif count > visible then
+                statusText:SetFormattedText(
+                    "Closest to completion \194\183 %d\226\128\147%d of %d in progress",
+                    scrollOffset + 1, math.min(scrollOffset + visible, count), count)
+            else
+                statusText:SetFormattedText("Closest to completion \194\183 %d in progress", count)
+            end
         elseif count > visible then
             statusText:SetFormattedText("%d\226\128\147%d of %d results \194\183 scroll for more",
                 scrollOffset + 1, math.min(scrollOffset + visible, count), count)
@@ -219,7 +227,12 @@ end
 
 function RunSearch()
     if not NS.indexReady then return end
-    currentResults = NS.Search(searchBox:GetText())
+    local query = searchBox:GetText()
+    if query:gsub("%s+", "") == "" then
+        currentResults = NS.nearlyDone or {}
+    else
+        currentResults = NS.Search(query)
+    end
     scrollOffset = 0
     RefreshList()
 end
@@ -445,6 +458,13 @@ function NS.RestoreSession()
         ShowDetail(ui.detailID)
     else
         ShowSearch(true) -- don't steal keyboard focus on login
+    end
+end
+
+function NS.OnNearlyDoneReady()
+    if frame and frame:IsShown() and currentView == "search"
+        and searchBox:GetText() == "" then
+        RunSearch()
     end
 end
 

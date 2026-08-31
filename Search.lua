@@ -97,6 +97,7 @@ function NS.StartIndexBuild(force)
             NS.indexReady = true
             if NS.OnIndexProgress then NS.OnIndexProgress(total, total) end
             if NS.OnIndexReady then NS.OnIndexReady() end
+            NS.StartProgressScan()
         else
             if NS.OnIndexProgress then NS.OnIndexProgress(done, total) end
         end
@@ -135,6 +136,57 @@ function NS.ProgressPct(achID)
     end
     if p == false then return nil end
     return p
+end
+
+-- "Closest to completion": background scan of every incomplete achievement,
+-- shown when the search box is empty. Chunked like the index build; re-run
+-- (coalesced) whenever criteria change.
+NS.nearlyDone = nil -- sorted array of { entry = e, pct = p }
+
+local scanCo, scanFrame, scanQueued
+
+function NS.StartProgressScan()
+    if not NS.indexReady then return end
+    if scanCo then
+        scanQueued = true
+        return
+    end
+    scanFrame = scanFrame or CreateFrame("Frame")
+    local results = {}
+    scanCo = coroutine.create(function()
+        for i, e in ipairs(NS.index) do
+            if not e.completed then
+                local p = NS.ProgressPct(e.id)
+                if p and p > 0 then
+                    results[#results + 1] = { entry = e, pct = p }
+                end
+            end
+            if i % 80 == 0 then coroutine.yield() end
+        end
+    end)
+    scanFrame:SetScript("OnUpdate", function(self)
+        local ok, err = coroutine.resume(scanCo)
+        if not ok then
+            self:SetScript("OnUpdate", nil)
+            scanCo = nil
+            geterrorhandler()(err)
+            return
+        end
+        if coroutine.status(scanCo) == "dead" then
+            self:SetScript("OnUpdate", nil)
+            scanCo = nil
+            table.sort(results, function(a, b)
+                if a.pct ~= b.pct then return a.pct > b.pct end
+                return a.entry.name < b.entry.name
+            end)
+            NS.nearlyDone = results
+            if NS.OnNearlyDoneReady then NS.OnNearlyDoneReady() end
+            if scanQueued then
+                scanQueued = false
+                NS.StartProgressScan()
+            end
+        end
+    end)
 end
 
 -- True if every character of `needle` appears in `hay` in order.
