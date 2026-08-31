@@ -124,6 +124,14 @@ local function CreateStrip()
         row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H)
         row:SetPoint("TOPRIGHT", 0, -(i - 1) * ROW_H)
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        -- rows cover the strip, so forward drags to it
+        row:RegisterForDrag("LeftButton")
+        row:SetScript("OnDragStart", function() strip:StartMoving() end)
+        row:SetScript("OnDragStop", function()
+            strip:StopMovingOrSizing()
+            local point, _, relPoint, x, y = strip:GetPoint()
+            QuestGlassDB.ui.stripPos = { point, relPoint, x, y }
+        end)
 
         local hl = row:CreateTexture(nil, "HIGHLIGHT")
         hl:SetAllPoints()
