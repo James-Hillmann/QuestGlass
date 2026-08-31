@@ -43,7 +43,8 @@ only if you changed the `.toc`.
   that requires it.
 - Click a result for the detail view: progress bar + live criteria, incomplete
   first. Enter in the search box opens the top result.
-- ESC closes the window. Drag anywhere to move; position is saved.
+- The window stays open until you click the X (or `/qg` again) — ESC only
+  unfocuses the search box. Drag anywhere to move; position is saved.
 
 ## Troubleshooting
 

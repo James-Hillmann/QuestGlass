@@ -242,8 +242,6 @@ local function CreateMainFrame()
         frame:SetPoint("CENTER")
     end
 
-    tinsert(UISpecialFrames, "QuestGlassFrame") -- ESC closes it
-
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", 0, -16)
     title:SetText("QuestGlass")
@@ -257,9 +255,9 @@ local function CreateMainFrame()
     searchBox:SetPoint("TOP", 0, -44)
     searchBox:SetAutoFocus(false)
     searchBox:HookScript("OnTextChanged", OnSearchChanged)
+    -- ESC only drops focus; the window stays until the X (or /qg) closes it
     searchBox:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
-        frame:Hide()
     end)
     searchBox:SetScript("OnEnterPressed", function(self)
         self:ClearFocus()
