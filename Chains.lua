@@ -124,22 +124,26 @@ end
 
 local lastTomTomUID
 
+-- Returns the method used ("TomTom" / "map pin") or nil.
 local function PlaceWaypoint(mapID, x, y, title)
-    if not (mapID and x and y and x > 0 and y > 0) then return false end
+    if not (mapID and x and y and x > 0 and y > 0) then return nil end
     if TomTom and TomTom.AddWaypoint then
         if lastTomTomUID then
             pcall(TomTom.RemoveWaypoint, TomTom, lastTomTomUID)
         end
-        lastTomTomUID = TomTom:AddWaypoint(mapID, x, y,
+        local ok, uid = pcall(TomTom.AddWaypoint, TomTom, mapID, x, y,
             { title = title, from = "QuestGlass" })
-        return true
+        if ok and uid then
+            lastTomTomUID = uid
+            return "TomTom"
+        end
     end
     if C_Map.CanSetUserWaypointOnMap(mapID) then
         C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))
         C_SuperTrack.SetSuperTrackedUserWaypoint(true)
-        return true
+        return "map pin"
     end
-    return false
+    return nil
 end
 
 -- Point the arrow at the right spot for a chain given actual progress:
@@ -160,57 +164,78 @@ function Chains.SetWaypoint(questLineID)
             C_SuperTrack.SetSuperTrackedQuestID(s.active.id)
             tracked = true
         end
-        -- Waypoint APIs vary by client build; feature-detect each in turn
+        -- Waypoint APIs vary by client build; feature-detect each in turn,
+        -- searching the whole map hierarchy (sub-zone → zone → continent)
         local mapID, x, y
         if C_QuestLog.GetNextWaypoint then
             mapID, x, y = C_QuestLog.GetNextWaypoint(s.active.id)
         end
-        local pm = C_Map.GetBestMapForUnit("player")
-        if not mapID and pm and C_QuestLog.GetNextWaypointForMap then
-            local wx, wy = C_QuestLog.GetNextWaypointForMap(s.active.id, pm)
-            if wx then mapID, x, y = pm, wx, wy end
-        end
-        if not mapID and pm and C_QuestLog.GetQuestsOnMap then
-            -- modern replacement for QuestPOIGetIconInfo (removed in 12.x)
-            for _, q in ipairs(C_QuestLog.GetQuestsOnMap(pm) or {}) do
-                if q.questID == s.active.id then
-                    mapID, x, y = pm, q.x, q.y
-                    break
-                end
+        local maps = CandidateMaps()
+        if not mapID and C_QuestLog.GetNextWaypointForMap then
+            for _, m in ipairs(maps) do
+                local wx, wy = C_QuestLog.GetNextWaypointForMap(s.active.id, m)
+                if wx then mapID, x, y = m, wx, wy break end
             end
         end
-        if not mapID and pm and QuestPOIGetIconInfo then
-            local _, px, py = QuestPOIGetIconInfo(s.active.id)
-            if px then mapID, x, y = pm, px, py end
+        if not mapID and C_QuestLog.GetQuestsOnMap then
+            -- modern replacement for QuestPOIGetIconInfo (removed in 12.x)
+            for _, m in ipairs(maps) do
+                for _, q in ipairs(C_QuestLog.GetQuestsOnMap(m) or {}) do
+                    if q.questID == s.active.id then
+                        mapID, x, y = m, q.x, q.y
+                        break
+                    end
+                end
+                if mapID then break end
+            end
         end
         local title = s.active.name or ("Quest " .. s.active.index)
-        local arrow = PlaceWaypoint(mapID, x, y, title)
-        if arrow or tracked then
-            return ("%s %s (quest %d/%d)"):format(
-                arrow and "arrow \226\134\146" or "tracking", title,
-                s.active.index, s.total)
+        local method = PlaceWaypoint(mapID, x, y, title)
+        if method then
+            return ("arrow \226\134\146 %s via %s (quest %d/%d)")
+                :format(title, method, s.active.index, s.total)
+        elseif tracked then
+            return ("tracking %s (quest %d/%d) \226\128\148 no map coords found for an arrow")
+                :format(title, s.active.index, s.total)
         end
         return nil, "no waypoint data for the active quest (try opening the world map first)"
     end
 
     local nextUp = s.upcoming[1]
     if not nextUp then return nil, "chain already complete" end
+    local mapID, x, y
     local info = Chains.GetQuestLineForQuest(nextUp.id)
     if info then
-        local mapID, x, y
         if info.startMapID and info.startMapID > 0 then
-            mapID = info.startMapID
             -- re-query on the start map so x/y are in that map's coordinates
-            local onMap = Chains.GetQuestLineForQuest(nextUp.id, mapID)
-            if onMap then x, y = onMap.x, onMap.y end
-        else
+            local onMap = Chains.GetQuestLineForQuest(nextUp.id, info.startMapID)
+            if onMap and onMap.x then mapID, x, y = info.startMapID, onMap.x, onMap.y end
+        end
+        if not mapID and info.x and info.x > 0 then
             mapID, x, y = C_Map.GetBestMapForUnit("player"), info.x, info.y
         end
-        local title = nextUp.name or "Next quest"
-        if PlaceWaypoint(mapID, x, y, title) then
-            return ("arrow \226\134\146 pick up %s (quest %d/%d)")
-                :format(title, nextUp.index, s.total)
+    end
+    if not mapID and C_QuestLine.GetAvailableQuestLines then
+        -- the markers the world map itself draws for questline starts
+        for _, m in ipairs(CandidateMaps()) do
+            pcall(C_QuestLine.RequestQuestLinesForMap, m)
+            local ok, lines = pcall(C_QuestLine.GetAvailableQuestLines, m)
+            if ok then
+                for _, li in ipairs(lines or {}) do
+                    if li.questLineID == questLineID and li.x and li.x > 0 then
+                        mapID, x, y = m, li.x, li.y
+                        break
+                    end
+                end
+            end
+            if mapID then break end
         end
+    end
+    local title = nextUp.name or "Next quest"
+    local method = PlaceWaypoint(mapID, x, y, title)
+    if method then
+        return ("arrow \226\134\146 pick up %s via %s (quest %d/%d)")
+            :format(title, method, nextUp.index, s.total)
     end
     return nil, "couldn't locate the next quest giver (try again in the achievement's zone)"
 end
