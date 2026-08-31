@@ -5,8 +5,9 @@ local ADDON, NS = ...
 -- detail view; right-click re-points the arrow for that storyline.
 
 local MAX_PINS = 3
-local ROW_H = 46
-local STRIP_W = 280
+local ROW_H = 52
+local PAD = 8
+local STRIP_W = 300
 
 local strip
 local rows = {}
@@ -96,9 +97,13 @@ local function CreateStrip()
     strip = CreateFrame("Frame", "QuestGlassTracker", UIParent, "BackdropTemplate")
     strip:SetSize(STRIP_W, ROW_H)
     strip:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
     })
-    strip:SetBackdropColor(0, 0, 0, 0.45)
+    strip:SetBackdropColor(0.04, 0.04, 0.07, 0.88)
+    strip:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.9)
     strip:SetFrameStrata("MEDIUM")
     strip:SetMovable(true)
     strip:EnableMouse(true)
@@ -121,8 +126,8 @@ local function CreateStrip()
     for i = 1, MAX_PINS do
         local row = CreateFrame("Button", nil, strip)
         row:SetHeight(ROW_H)
-        row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H)
-        row:SetPoint("TOPRIGHT", 0, -(i - 1) * ROW_H)
+        row:SetPoint("TOPLEFT", PAD, -PAD - (i - 1) * ROW_H)
+        row:SetPoint("TOPRIGHT", -PAD, -PAD - (i - 1) * ROW_H)
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         -- rows cover the strip, so forward drags to it
         row:RegisterForDrag("LeftButton")
@@ -135,38 +140,49 @@ local function CreateStrip()
 
         local hl = row:CreateTexture(nil, "HIGHLIGHT")
         hl:SetAllPoints()
-        hl:SetColorTexture(1, 1, 1, 0.06)
+        hl:SetColorTexture(1, 1, 1, 0.05)
+
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(30, 30)
+        row.icon:SetPoint("TOPLEFT", 0, -6)
+        row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        local iconBorder = row:CreateTexture(nil, "BORDER")
+        iconBorder:SetPoint("TOPLEFT", row.icon, -1, 1)
+        iconBorder:SetPoint("BOTTOMRIGHT", row.icon, 1, -1)
+        iconBorder:SetColorTexture(0, 0, 0, 0.8)
 
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.name:SetPoint("TOPLEFT", 8, -5)
-        row.name:SetPoint("RIGHT", -22, 0)
+        row.name:SetPoint("TOPLEFT", 38, -4)
+        row.name:SetPoint("RIGHT", -18, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
 
         row.bar = CreateFrame("StatusBar", nil, row)
-        row.bar:SetPoint("TOPLEFT", 8, -19)
-        row.bar:SetPoint("TOPRIGHT", -8, -19)
-        row.bar:SetHeight(7)
-        row.bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-        row.bar:SetStatusBarColor(0.2, 0.75, 0.2)
+        row.bar:SetPoint("TOPLEFT", 38, -19)
+        row.bar:SetPoint("TOPRIGHT", -4, -19)
+        row.bar:SetHeight(9)
+        row.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        row.bar:SetStatusBarColor(0.15, 0.75, 0.25)
         local barBG = row.bar:CreateTexture(nil, "BACKGROUND")
         barBG:SetAllPoints()
-        barBG:SetColorTexture(0.12, 0.12, 0.12, 0.9)
+        barBG:SetColorTexture(0.1, 0.1, 0.1, 0.9)
+        row.barText = row.bar:CreateFontString(nil, "OVERLAY")
+        row.barText:SetFont(select(1, GameFontHighlightSmall:GetFont()), 9, "OUTLINE")
+        row.barText:SetPoint("CENTER")
 
         row.chain = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.chain:SetPoint("TOPLEFT", 8, -30)
-        row.chain:SetPoint("RIGHT", -8, 0)
+        row.chain:SetPoint("TOPLEFT", 38, -33)
+        row.chain:SetPoint("RIGHT", -4, 0)
         row.chain:SetJustifyH("LEFT")
         row.chain:SetWordWrap(false)
-        row.chain:SetTextColor(0.8, 0.8, 0.8)
+        row.chain:SetTextColor(0.75, 0.75, 0.75)
 
-        row.unpin = CreateFrame("Button", nil, row)
-        row.unpin:SetSize(14, 14)
-        row.unpin:SetPoint("TOPRIGHT", -5, -4)
-        row.unpin:SetNormalTexture("Interface\\Buttons\\UI-StopButton")
-        row.unpin:SetAlpha(0.5)
-        row.unpin:SetScript("OnEnter", function(self) self:SetAlpha(1) end)
-        row.unpin:SetScript("OnLeave", function(self) self:SetAlpha(0.5) end)
+        row.unpin = CreateFrame("Button", nil, row, "UIPanelCloseButton")
+        row.unpin:SetSize(18, 18)
+        row.unpin:SetPoint("TOPRIGHT", 2, -1)
+        row.unpin:SetAlpha(0.55)
+        row.unpin:HookScript("OnEnter", function(self) self:SetAlpha(1) end)
+        row.unpin:HookScript("OnLeave", function(self) self:SetAlpha(0.55) end)
         row.unpin:SetScript("OnClick", function()
             if row.achID then NS.TogglePin(row.achID) end
         end)
@@ -204,7 +220,7 @@ function NS.RefreshTracker()
         return
     end
     if not strip then CreateStrip() end
-    strip:SetHeight(#pins * ROW_H)
+    strip:SetHeight(#pins * ROW_H + PAD * 2)
     strip:Show()
 
     for i = 1, MAX_PINS do
@@ -213,13 +229,15 @@ function NS.RefreshTracker()
         if not achID then
             row:Hide()
         else
-            local _, name, _, completed = GetAchievementInfo(achID)
+            local _, name, _, completed, _, _, _, _, _, icon = GetAchievementInfo(achID)
             row.achID = achID
             row:Show()
+            row.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
             row.name:SetText(name or ("Achievement " .. achID))
             local done, total = CriteriaProgress(achID)
             row.bar:SetMinMaxValues(0, total)
             row.bar:SetValue(completed and total or done)
+            row.barText:SetFormattedText("%d / %d", completed and total or done, total)
             if completed then
                 row.name:SetTextColor(0.6, 1, 0.6)
                 row.chain:SetText("Complete!")
