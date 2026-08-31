@@ -14,17 +14,17 @@ Clone the repo directly into your AddOns folder — the repo root *is* the addon
 folder:
 
 ```
-git clone https://github.com/James-Hillmann/QuestGlass.git "C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\QuestGlass"
+git clone https://github.com/James-Hillmann/QuestGlass.git "E:\Battlenet\World of Warcraft\_retail_\Interface\AddOns\QuestGlass"
 ```
 
 (Adjust the path if WoW is installed elsewhere — check the Battle.net app →
 WoW → gear icon → Show in Explorer.)
 
-To update later:
+To update later, double-click `Update-QuestGlass.bat` in the addon folder
+(make a Desktop shortcut to it), or run:
 
 ```
-cd "C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\QuestGlass"
-git pull
+git -C "E:\Battlenet\World of Warcraft\_retail_\Interface\AddOns\QuestGlass" pull
 ```
 
 If WoW is running, `/reload` picks up the new files. Fully restart the client
