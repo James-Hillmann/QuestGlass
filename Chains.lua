@@ -152,6 +152,51 @@ local function PlaceWaypoint(mapID, x, y, title)
     return nil
 end
 
+-- Remove just the arrow/pin (keep tracking the chain)
+local function RemoveArrowOnly()
+    if lastTomTomUID and TomTom then
+        pcall(TomTom.RemoveWaypoint, TomTom, lastTomTomUID)
+        lastTomTomUID = nil
+    end
+    if lastMethod == "map pin" and C_Map.ClearUserWaypoint then
+        C_Map.ClearUserWaypoint()
+    end
+    lastMethod = nil
+end
+
+-- Distance in yards from the player to a point on a map, or nil if it
+-- can't be computed (instances, different continents, missing APIs).
+local function DistanceToPoint(mapID, x, y)
+    if not (C_Map.GetPlayerMapPosition and C_Map.GetWorldPosFromMapPos) then
+        return nil
+    end
+    local pm = C_Map.GetBestMapForUnit("player")
+    if not (pm and mapID and x and y) then return nil end
+    local ppos = C_Map.GetPlayerMapPosition(pm, "player")
+    if not ppos then return nil end
+    local okP, pCont, pWorld = pcall(C_Map.GetWorldPosFromMapPos, pm, ppos)
+    local okT, tCont, tWorld = pcall(C_Map.GetWorldPosFromMapPos, mapID,
+        CreateVector2D(x, y))
+    if not (okP and okT and pWorld and tWorld and pCont == tCont) then
+        return nil
+    end
+    local dx, dy = pWorld.x - tWorld.x, pWorld.y - tWorld.y
+    return math.sqrt(dx * dx + dy * dy)
+end
+
+-- True if the arrow should be suppressed because the target is close by;
+-- also removes any arrow we had up.
+local function TooCloseForArrow(mapID, x, y)
+    local minD = QuestGlassDB.options and QuestGlassDB.options.arrowMinDistance or 200
+    if minD <= 0 then return nil end
+    local dist = DistanceToPoint(mapID, x, y)
+    if dist and dist <= minD then
+        RemoveArrowOnly()
+        return dist
+    end
+    return nil
+end
+
 -- Stop tracking: remove our arrow/pin and forget the chain.
 function Chains.ClearWaypoint()
     if lastTomTomUID and TomTom then
@@ -227,6 +272,11 @@ function Chains.SetWaypoint(questLineID)
             end
         end
         local title = s.active.name or ("Quest " .. s.active.index)
+        local near = TooCloseForArrow(mapID, x, y)
+        if near then
+            return ("%s is right there (%d yds) \226\128\148 no arrow needed")
+                :format(title, near)
+        end
         local method = PlaceWaypoint(mapID, x, y, title)
         if method then
             return ("arrow \226\134\146 %s via %s (quest %d/%d)")
@@ -269,6 +319,11 @@ function Chains.SetWaypoint(questLineID)
         end
     end
     local title = nextUp.name or "Next quest"
+    local near = TooCloseForArrow(mapID, x, y)
+    if near then
+        return ("%s starts right there (%d yds) \226\128\148 no arrow needed")
+            :format(title, near)
+    end
     local method = PlaceWaypoint(mapID, x, y, title)
     if method then
         return ("arrow \226\134\146 pick up %s via %s (quest %d/%d)")

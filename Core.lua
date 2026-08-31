@@ -84,6 +84,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
         local o = QuestGlassDB.options
         if o.windowScale == nil then o.windowScale = 1 end
         if o.stripScale == nil then o.stripScale = 1 end
+        if o.arrowMinDistance == nil then o.arrowMinDistance = 200 end
     elseif event == "ADDON_LOADED" and arg1 == "Blizzard_AchievementUI" then
         HookBlizzardAchievementUI()
     elseif event == "PLAYER_LOGIN" then

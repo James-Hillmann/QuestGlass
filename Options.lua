@@ -60,18 +60,19 @@ local function MakeSlider(label, y, key, minV, maxV, step)
     local thumb = s:GetThumbTexture()
     thumb:SetSize(10, 16)
     thumb:SetVertexColor(0.8, 0.8, 0.8)
+    local fmt = step < 1 and "%.2f" or "%d"
     s:SetScript("OnValueChanged", function(self, v)
-        v = math.floor(v * 20 + 0.5) / 20 -- snap to .05
+        v = math.floor(v / step + 0.5) * step -- snap to step
         if self.updating then return end
         Opts()[key] = v
-        value:SetFormattedText("%.2f", v)
+        value:SetFormattedText(fmt, v)
         NS.ApplyOptions()
     end)
     s.Refresh = function(self)
         self.updating = true
         self:SetValue(Opts()[key])
         self.updating = false
-        value:SetFormattedText("%.2f", Opts()[key])
+        value:SetFormattedText(fmt, Opts()[key])
     end
     return s
 end
@@ -83,11 +84,13 @@ MakeLabel("Changes apply immediately and are saved per account.", 16, -36, "Game
 
 controls[#controls + 1] = MakeSlider("Window scale", -70, "windowScale", 0.6, 1.6, 0.05)
 controls[#controls + 1] = MakeSlider("Tracker strip scale", -120, "stripScale", 0.6, 1.6, 0.05)
-controls[#controls + 1] = MakeCheck("Lock tracker strip (disable dragging)", -170, "stripLocked")
-controls[#controls + 1] = MakeCheck("Hide tracker strip in combat", -200, "stripCombatHide")
+controls[#controls + 1] = MakeSlider("Skip the arrow when the target is within (yards, 0 = always show)",
+    -170, "arrowMinDistance", 0, 500, 25)
+controls[#controls + 1] = MakeCheck("Lock tracker strip (disable dragging)", -220, "stripLocked")
+controls[#controls + 1] = MakeCheck("Hide tracker strip in combat", -250, "stripCombatHide")
 
 MakeLabel("Tip: bind a key to toggle QuestGlass under Options \194\187 Keybindings \194\187 AddOns.",
-    16, -250, "GameFontDisableSmall")
+    16, -300, "GameFontDisableSmall")
 
 panel:SetScript("OnShow", function()
     for _, c in ipairs(controls) do c:Refresh() end
