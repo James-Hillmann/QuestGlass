@@ -48,8 +48,11 @@ Full product spec lives in [project_description.md](project_description.md).
 - ✅ Easy-close restored on the main window (ESC / UISpecialFrames) now
   that the strip carries the tracking (James's 2026-08-30 request)
 
+- ✅ Tracked-storyline expansion: gold accent, per-quest bar, remaining
+  quest list — tested in-game 2026-08-30 along with the strip
+
 **P3 leftovers:**
-- [ ] Test in-game; saved scale option if wanted (`/qg scale`)
+- [ ] Saved scale option if wanted (`/qg scale`)
 - [ ] Real scrollbar on lists (nice-to-have)
 - Saved scale, name-cache warming, general polish (scrollbar for the list)
 
