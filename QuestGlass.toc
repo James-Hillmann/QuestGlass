@@ -7,5 +7,7 @@
 ## IconTexture: Interface\Icons\Achievement_Quests_Completed_08
 
 Core.lua
+Overrides.lua
 Search.lua
+Chains.lua
 UI.lua

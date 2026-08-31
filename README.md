@@ -36,6 +36,8 @@ only if you changed the `.toc`.
 |---|---|
 | `/qg` | Toggle the window (search box auto-focused) |
 | `/qg <text>` | Open with a search already run, e.g. `/qg sojourner` |
+| `/qg way` | Re-point the arrow at the tracked storyline |
+| `/qg automap <achID>` | Debug: show quest→questline mapping for an achievement |
 | `/qg rebuild` | Force a full index rebuild (normally automatic per patch) |
 
 - With an empty search box, the window shows your "closest to completion"
@@ -45,6 +47,11 @@ only if you changed the `.toc`.
   that requires it.
 - Click a result for the detail view: progress bar + live criteria, incomplete
   first. Enter in the search box opens the top result.
+- Criteria marked ▶ are mapped storylines: click one to track it — a summary
+  panel shows chain progress, the active quest's objective, and what's next,
+  and the arrow (TomTom if installed, otherwise Blizzard's map pin) points at
+  the right spot for your progress. It advances automatically as you turn
+  quests in.
 - The window stays open until you click the X (or `/qg` again) — ESC only
   unfocuses the search box. Drag anywhere to move; position is saved.
 

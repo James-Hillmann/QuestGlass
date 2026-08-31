@@ -16,18 +16,26 @@ Full product spec lives in [project_description.md](project_description.md).
 - [ ] `CRITERIA_UPDATE` debounce holds up in combat/questing
 - [ ] Interface number still current (`/run print((select(4, GetBuildInfo())))`)
 
-## ⬜ P2 — Chains (NEXT UP)
+## 🔶 P2 — Chains (built 2026-08-30, needs in-game testing)
 
-- `Chains.lua`: `ChainState` (done/active/upcoming per quest line)
-- Auto-mapping: criteria `assetID` → `C_QuestLine.GetQuestLineInfo` →
-  `questLineID`, cached via `/qg automap <achID>`; `Overrides.lua` escape hatch
-- Detail view chain rendering: "quest 3/11", active objectives, upcoming names
-- Click → **TomTom** waypoint (user has TomTom installed): giver if chain not
-  started, objective via `GetNextWaypointForMap` if quest in log
-- Auto-advance arrow on `QUEST_TURNED_IN` / `QUEST_WATCH_UPDATE`
-- Warm quest names via `RequestLoadQuestByID` → re-render on
+- ✅ `Chains.lua`: chain state (done/active/upcoming per quest line)
+- ✅ Auto-mapping on detail open: criteria `assetID` →
+  `C_QuestLine.GetQuestLineInfo` → `questLineID`, cached in SavedVariables per
+  build; `/qg automap <achID>` debug output; `Overrides.lua` escape hatch
+- ✅ Detail view: ▶ marker on mapped criteria, "quest 3/11" column, storyline
+  panel (progress, active objective, next quests) on click
+- ✅ Click → TomTom waypoint (Blizzard map-pin fallback): giver if not
+  started, `GetNextWaypoint` objective if in log; `/qg way` re-points
+- ✅ Auto-advance on `QUEST_TURNED_IN` / `QUEST_WATCH_UPDATE`
+- ✅ Name warming via `RequestLoadQuestByID` → re-render on
   `QUEST_DATA_LOAD_RESULT`
-- Faction-variant chains: either variant completed counts
+
+**P2 leftovers:**
+- [ ] Test in-game: automap hit rate on Sojourner achievements, waypoint
+  accuracy for both started and unstarted chains, auto-advance
+- [ ] Faction-variant chains (e.g. 90546/90547): treat either variant
+  completed as done
+- [ ] Populate `Overrides.lua` for whatever automap misses
 
 ## ⬜ P3 — Tracker strip + polish
 

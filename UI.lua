@@ -19,6 +19,7 @@ local detailCriteria = {}   -- built when a detail view opens
 local detail = {}
 
 local RunSearch -- forward declaration (defined under "Search plumbing")
+local selectedQuestLine -- quest line the user clicked in the detail view
 
 local function AchProgress(achID)
     local n = GetAchievementNumCriteria(achID)
@@ -66,6 +67,7 @@ local function RefreshList()
                 local r = currentResults[idx]
                 local e = r.entry
                 row.achID = e.id
+                row.critData = nil
                 row.icon:SetTexture(e.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
                 row.icon:Show()
                 row.name:SetPoint("LEFT", 34, 0)
@@ -93,15 +95,28 @@ local function RefreshList()
             else
                 local c = detailCriteria[idx]
                 row.achID = nil
+                row.critData = c
                 row.icon:Hide()
                 row.name:SetPoint("LEFT", 4, 0)
-                row.name:SetText(c.text)
+                local prefix = (c.questLineID and not c.completed)
+                    and "|cffffd100\226\150\182|r " or ""
+                row.name:SetText(prefix .. c.text)
                 if c.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
                     row.right:SetText(CHECK)
                 else
-                    row.name:SetTextColor(0.95, 0.95, 0.95)
-                    row.right:SetText(c.progress or "")
+                    if c.questLineID and c.questLineID == selectedQuestLine then
+                        row.name:SetTextColor(1, 0.82, 0) -- tracked storyline
+                    else
+                        row.name:SetTextColor(0.95, 0.95, 0.95)
+                    end
+                    if c.state then
+                        local pos = c.state.active and c.state.active.index
+                            or math.min(c.state.done + 1, c.state.total)
+                        row.right:SetFormattedText("quest %d/%d", pos, c.state.total)
+                    else
+                        row.right:SetText(c.progress or "")
+                    end
                 end
             end
         end
@@ -148,9 +163,10 @@ end
 
 local function BuildDetailCriteria(achID)
     wipe(detailCriteria)
+    local qlMap = NS.Chains.EnsureMap(achID)
     local n = GetAchievementNumCriteria(achID)
     for i = 1, n do
-        local ok, text, _, completed, quantity, reqQuantity, _, _, _,
+        local ok, text, ctype, completed, quantity, reqQuantity, _, _, assetID,
             quantityString = pcall(GetAchievementCriteriaInfo, achID, i)
         if ok and text and text ~= "" then
             local progress
@@ -159,11 +175,20 @@ local function BuildDetailCriteria(achID)
                     and quantityString
                     or (quantity .. "/" .. reqQuantity)
             end
-            detailCriteria[#detailCriteria + 1] = {
+            local c = {
+                critIndex = i,
                 text = text,
                 completed = completed and true or false,
                 progress = progress,
             }
+            if ctype == 27 and assetID and assetID > 0 then -- quest criterion
+                c.questID = assetID
+                c.questLineID = qlMap[assetID]
+                if c.questLineID and not c.completed then
+                    c.state = NS.Chains.State(c.questLineID)
+                end
+            end
+            detailCriteria[#detailCriteria + 1] = c
         end
     end
     -- Incomplete criteria first, original order within each group
@@ -171,6 +196,51 @@ local function BuildDetailCriteria(achID)
         if a.completed ~= b.completed then return not a.completed end
         return false
     end)
+end
+
+-- Storyline summary for the selected criterion, shown under the progress bar
+local function RenderChainInfo(c)
+    local s = c and (c.state or NS.Chains.State(c.questLineID))
+    if not s then
+        detail.chainText:SetText("")
+        detail.pane:SetHeight(96)
+        return
+    end
+    local lines = {
+        ("|cffffd100Storyline:|r %d/%d quests complete"):format(s.done, s.total),
+    }
+    if s.active then
+        local obj
+        for _, o in ipairs(s.active.objectives or {}) do
+            if not o.finished then obj = o.text break end
+        end
+        lines[#lines + 1] = ("|cff33ff66Now:|r %s%s"):format(
+            s.active.name or "(loading\226\128\166)", obj and (" \226\128\148 " .. obj) or "")
+    elseif s.upcoming[1] then
+        lines[#lines + 1] = ("|cff33ff66Next:|r pick up %s"):format(
+            s.upcoming[1].name or "(loading\226\128\166)")
+    else
+        lines[#lines + 1] = "|cff33ff66All quests turned in.|r"
+    end
+    local upNames = {}
+    local first = s.active and 1 or 2
+    for i = first, math.min(first + 1, #s.upcoming) do
+        upNames[#upNames + 1] = s.upcoming[i].name or "(loading\226\128\166)"
+    end
+    if #upNames > 0 then
+        lines[#lines + 1] = "|cff999999Then:|r " .. table.concat(upNames, ", ")
+    end
+    detail.chainText:SetText(table.concat(lines, "\n"))
+    detail.pane:SetHeight(152)
+end
+
+-- Click on a ▶ criterion: track that storyline and point the arrow
+local function SelectChain(c)
+    selectedQuestLine = c.questLineID
+    local text, err = NS.Chains.SetWaypoint(c.questLineID)
+    print("|cff7fd5ffQuestGlass:|r " .. (text or ("no arrow: " .. (err or "unknown"))))
+    RenderChainInfo(c)
+    RefreshList()
 end
 
 local function RenderDetail()
@@ -202,11 +272,21 @@ local function RenderDetail()
         detail.barText:SetText(completed and "Complete" or "Incomplete")
     end
 
+    -- keep the storyline panel in sync with the (possibly rebuilt) criteria
+    local selected
+    if selectedQuestLine then
+        for _, c in ipairs(detailCriteria) do
+            if c.questLineID == selectedQuestLine then selected = c break end
+        end
+    end
+    RenderChainInfo(selected)
+
     statusText:SetText("")
     RefreshList()
 end
 
 local function ShowDetail(achID)
+    if achID ~= detailAchID then selectedQuestLine = nil end
     currentView = "detail"
     detailAchID = achID
     scrollOffset = 0
@@ -353,8 +433,8 @@ local function CreateMainFrame()
     detail.desc:SetHeight(28)
 
     detail.bar = CreateFrame("StatusBar", nil, pane)
-    detail.bar:SetPoint("BOTTOMLEFT", 0, 0)
-    detail.bar:SetPoint("BOTTOMRIGHT", 0, 0)
+    detail.bar:SetPoint("TOPLEFT", 0, -70)
+    detail.bar:SetPoint("TOPRIGHT", 0, -70)
     detail.bar:SetHeight(16)
     detail.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     detail.bar:SetStatusBarColor(0.2, 0.7, 0.2)
@@ -363,6 +443,13 @@ local function CreateMainFrame()
     barBG:SetColorTexture(0.15, 0.15, 0.15, 0.9)
     detail.barText = detail.bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     detail.barText:SetPoint("CENTER")
+
+    -- Storyline summary for the tracked criterion (below the bar)
+    detail.chainText = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    detail.chainText:SetPoint("TOPLEFT", 0, -92)
+    detail.chainText:SetPoint("RIGHT", pane, "RIGHT", 0, 0)
+    detail.chainText:SetJustifyH("LEFT")
+    detail.chainText:SetSpacing(3)
 
     -- Shared list rows
     local listTop = -110 -- overridden per view via anchor frame
@@ -402,7 +489,12 @@ local function CreateMainFrame()
         row.right:SetPoint("RIGHT", -4, 0)
 
         row:SetScript("OnClick", function(self)
-            if self.achID then ShowDetail(self.achID) end
+            if self.achID then
+                ShowDetail(self.achID)
+            elseif self.critData and self.critData.questLineID
+                and not self.critData.completed then
+                SelectChain(self.critData)
+            end
         end)
         row:SetScript("OnEnter", function(self)
             if self.achID then
@@ -416,12 +508,17 @@ local function CreateMainFrame()
         listRows[i] = row
     end
 
-    -- When detail is open, push the list down below the header pane
+    -- When detail is open, the list hangs off the header pane's bottom edge,
+    -- so a growing pane (storyline panel) pushes it down automatically.
     local function LayoutList()
-        local top = (currentView == "detail") and -186 or -88
         listAnchor:ClearAllPoints()
-        listAnchor:SetPoint("TOPLEFT", 18, top)
-        listAnchor:SetPoint("TOPRIGHT", -18, top)
+        if currentView == "detail" then
+            listAnchor:SetPoint("TOPLEFT", detail.pane, "BOTTOMLEFT", 0, -8)
+            listAnchor:SetPoint("TOPRIGHT", detail.pane, "BOTTOMRIGHT", 0, -8)
+        else
+            listAnchor:SetPoint("TOPLEFT", 18, -88)
+            listAnchor:SetPoint("TOPRIGHT", -18, -88)
+        end
         listAnchor:SetPoint("BOTTOM", 0, 16)
     end
     hooksecurefunc(detail.pane, "Show", LayoutList)
