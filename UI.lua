@@ -1,8 +1,8 @@
 local ADDON, NS = ...
 
 local FRAME_W, FRAME_H = 480, 620
-local ROW_H = 32
-local NUM_ROWS = 15
+local ROW_H = 28
+local NUM_ROWS = 18
 
 local frame            -- main window
 local searchBox
@@ -75,10 +75,15 @@ local function RefreshList()
                     row.right:SetText(e.points .. "p " .. CHECK)
                 else
                     row.name:SetTextColor(1, 0.9, 0.5)
-                    local done, total = AchProgress(e.id)
-                    if done then
-                        row.right:SetFormattedText("%dp \194\183 %d%%", e.points,
-                            math.floor(done / total * 100 + 0.5))
+                    local p = NS.ProgressPct(e.id)
+                    if p then
+                        local pct = math.floor(p * 100 + 0.5)
+                        local color
+                        if pct >= 80 then color = "ff33ff66"      -- almost done: green
+                        elseif pct >= 50 then color = "ffffd100"  -- halfway: gold
+                        elseif pct > 0 then color = "ffdddddd"    -- started: white
+                        else color = "ff707070" end               -- untouched: dim
+                        row.right:SetFormattedText("%dp \194\183 |c%s%d%%|r", e.points, color, pct)
                     else
                         row.right:SetFormattedText("%dp", e.points)
                     end
@@ -105,8 +110,18 @@ local function RefreshList()
             -- status handled by OnIndexProgress
         elseif searchBox:GetText() == "" then
             statusText:SetText("Type to search " .. #NS.index .. " achievements")
+        elseif count > visible then
+            statusText:SetFormattedText("%d\226\128\147%d of %d results \194\183 scroll for more",
+                scrollOffset + 1, math.min(scrollOffset + visible, count), count)
         else
             statusText:SetFormattedText("%d result%s", count, count == 1 and "" or "s")
+        end
+    else
+        if count > visible then
+            statusText:SetFormattedText("%d\226\128\147%d of %d criteria \194\183 scroll for more",
+                scrollOffset + 1, math.min(scrollOffset + visible, count), count)
+        else
+            statusText:SetText("")
         end
     end
 end
@@ -383,7 +398,7 @@ local function CreateMainFrame()
 
     -- When detail is open, push the list down below the header pane
     local function LayoutList()
-        local top = (currentView == "detail") and -186 or -110
+        local top = (currentView == "detail") and -186 or -88
         listAnchor:ClearAllPoints()
         listAnchor:SetPoint("TOPLEFT", 18, top)
         listAnchor:SetPoint("TOPRIGHT", -18, top)

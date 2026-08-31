@@ -108,6 +108,35 @@ function NS.MarkAchievementEarned(achID)
     if entry then entry.completed = true end
 end
 
+-- Criteria-completion fraction per achievement, cached per session and
+-- invalidated on (debounced) CRITERIA_UPDATE. Returns nil if the achievement
+-- has no criteria list.
+local progressCache = {}
+
+function NS.InvalidateProgress()
+    wipe(progressCache)
+end
+
+function NS.ProgressPct(achID)
+    local p = progressCache[achID]
+    if p == nil then
+        local n = GetAchievementNumCriteria(achID)
+        if n == 0 then
+            p = false
+        else
+            local done = 0
+            for i = 1, n do
+                local ok, _, _, completed = pcall(GetAchievementCriteriaInfo, achID, i)
+                if ok and completed then done = done + 1 end
+            end
+            p = done / n
+        end
+        progressCache[achID] = p
+    end
+    if p == false then return nil end
+    return p
+end
+
 -- True if every character of `needle` appears in `hay` in order.
 local function Subsequence(hay, needle)
     local pos = 1
@@ -166,6 +195,12 @@ function NS.Search(query)
         end
         if a.score ~= b.score then
             return a.score > b.score
+        end
+        -- Nearly-done achievements are the ones you want to finish
+        local pa = NS.ProgressPct(a.entry.id) or 0
+        local pb = NS.ProgressPct(b.entry.id) or 0
+        if pa ~= pb then
+            return pa > pb
         end
         return a.entry.name < b.entry.name
     end)
