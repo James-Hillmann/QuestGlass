@@ -64,6 +64,9 @@ local function RefreshList()
                 local r = currentResults[idx]
                 local e = r.entry
                 row.achID = e.id
+                row.icon:SetTexture(e.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+                row.icon:Show()
+                row.name:SetPoint("LEFT", 34, 0)
                 row.name:SetText(e.name)
                 if e.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
@@ -81,6 +84,8 @@ local function RefreshList()
             else
                 local c = detailCriteria[idx]
                 row.achID = nil
+                row.icon:Hide()
+                row.name:SetPoint("LEFT", 4, 0)
                 row.name:SetText(c.text)
                 if c.completed then
                     row.name:SetTextColor(0.6, 1.0, 0.6)
@@ -336,8 +341,13 @@ local function CreateMainFrame()
         hl:SetAllPoints()
         hl:SetColorTexture(1, 1, 1, 0.08)
 
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(24, 24)
+        row.icon:SetPoint("LEFT", 4, 0)
+        row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- trim the default icon border
+
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        row.name:SetPoint("LEFT", 4, 0)
+        row.name:SetPoint("LEFT", 34, 0)
         row.name:SetPoint("RIGHT", -90, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)

@@ -54,7 +54,7 @@ function NS.StartIndexBuild(force)
         for _, cat in ipairs(cats) do
             local num = GetCategoryNumAchievements(cat) or 0
             for i = 1, num do
-                local ok, id, name, points, completed, _, _, _, _, _, _, _,
+                local ok, id, name, points, completed, _, _, _, _, _, icon, _,
                     isGuild, _, _, isStatistic = pcall(GetAchievementInfo, cat, i)
                 if ok and id and name and not isGuild and not isStatistic and not byID[id] then
                     local crit = critCache[id]
@@ -68,6 +68,7 @@ function NS.StartIndexBuild(force)
                         lname = name:lower(),
                         points = points or 0,
                         completed = completed and true or false,
+                        icon = icon,
                         crit = crit,
                     }
                     NS.index[#NS.index + 1] = entry
