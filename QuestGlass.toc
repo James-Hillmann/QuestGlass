@@ -5,6 +5,7 @@
 ## Version: 0.1.0
 ## SavedVariables: QuestGlassDB
 ## IconTexture: Interface\Icons\Achievement_Quests_Completed_08
+## AddonCompartmentFunc: QuestGlass_OnAddonCompartmentClick
 
 Core.lua
 Overrides.lua
@@ -12,3 +13,4 @@ Search.lua
 Chains.lua
 UI.lua
 Tracker.lua
+Options.lua

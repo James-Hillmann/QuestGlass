@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="QUESTGLASS_TOGGLE" category="ADDONS" header="QUESTGLASS">
+        QuestGlass_Toggle()
+    </Binding>
+</Bindings>

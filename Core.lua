@@ -2,6 +2,42 @@ local ADDON, NS = ...
 
 QuestGlassDB = QuestGlassDB or {}
 
+-- Keybinding (Bindings.xml) and addon compartment entry points
+BINDING_HEADER_QUESTGLASS = "QuestGlass"
+_G["BINDING_NAME_QUESTGLASS_TOGGLE"] = "Toggle QuestGlass"
+
+function QuestGlass_Toggle()
+    NS.ToggleUI()
+end
+
+function QuestGlass_OnAddonCompartmentClick()
+    NS.ToggleUI()
+end
+
+-- Ctrl+click an achievement in Blizzard's achievement UI -> open it here.
+-- The Blizzard frame is load-on-demand and its internals vary by build,
+-- so feature-detect the hook points.
+local blizzHooked = false
+local function HookBlizzardAchievementUI()
+    if blizzHooked then return end
+    local function openFrom(self)
+        if not IsControlKeyDown() then return end
+        local id = self.id
+        if not id and self.GetElementData then
+            local data = self:GetElementData()
+            id = data and (data.id or (data.achievement and data.achievement.id))
+        end
+        if id then NS.OpenAchievement(id) end
+    end
+    if AchievementTemplateMixin and AchievementTemplateMixin.OnClick then
+        hooksecurefunc(AchievementTemplateMixin, "OnClick", openFrom)
+        blizzHooked = true
+    elseif type(AchievementButton_OnClick) == "function" then
+        hooksecurefunc("AchievementButton_OnClick", openFrom)
+        blizzHooked = true
+    end
+end
+
 -- Debounce helper: returns a function that fires `fn` at most once per `delay`
 -- seconds, no matter how often it is called (CRITERIA_UPDATE spams hard).
 function NS.Debounce(delay, fn)
@@ -44,6 +80,12 @@ events:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON then
         QuestGlassDB.cache = QuestGlassDB.cache or {}
         QuestGlassDB.ui = QuestGlassDB.ui or {}
+        QuestGlassDB.options = QuestGlassDB.options or {}
+        local o = QuestGlassDB.options
+        if o.windowScale == nil then o.windowScale = 1 end
+        if o.stripScale == nil then o.stripScale = 1 end
+    elseif event == "ADDON_LOADED" and arg1 == "Blizzard_AchievementUI" then
+        HookBlizzardAchievementUI()
     elseif event == "PLAYER_LOGIN" then
         NS.StartIndexBuild(false)
         events:RegisterEvent("ACHIEVEMENT_EARNED")
@@ -54,6 +96,11 @@ events:SetScript("OnEvent", function(_, event, arg1)
         events:RegisterEvent("QUEST_WATCH_UPDATE")
         NS.RestoreSession() -- reopen where the user was before /reload
         NS.RefreshTracker() -- restore pinned tracker strip
+        NS.ApplyOptions()   -- scales etc.
+        local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+        if isLoaded and isLoaded("Blizzard_AchievementUI") then
+            HookBlizzardAchievementUI()
+        end
     elseif event == "ACHIEVEMENT_EARNED" then
         NS.MarkAchievementEarned(arg1)
         NS.UnpinIfEarned(arg1)
@@ -81,6 +128,8 @@ SlashCmdList.QUESTGLASS = function(msg)
         else
             print("|cff7fd5ffQuestGlass:|r nothing tracked yet — open an achievement and click a \194\187 storyline first.")
         end
+    elseif msg == "options" or msg == "config" then
+        NS.OpenOptions()
     elseif msg:match("^pin") then
         local achID = tonumber(msg:match("^pin%s+(%d+)"))
         if not achID then

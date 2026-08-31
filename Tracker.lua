@@ -119,8 +119,13 @@ local function CreateStrip()
     strip:SetMovable(true)
     strip:EnableMouse(true)
     strip:SetClampedToScreen(true)
+    strip:SetScale(QuestGlassDB.options and QuestGlassDB.options.stripScale or 1)
     strip:RegisterForDrag("LeftButton")
-    strip:SetScript("OnDragStart", strip.StartMoving)
+    strip:SetScript("OnDragStart", function(self)
+        if not (QuestGlassDB.options and QuestGlassDB.options.stripLocked) then
+            self:StartMoving()
+        end
+    end)
     strip:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, _, relPoint, x, y = self:GetPoint()
@@ -142,7 +147,11 @@ local function CreateStrip()
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         -- rows cover the strip, so forward drags to it
         row:RegisterForDrag("LeftButton")
-        row:SetScript("OnDragStart", function() strip:StartMoving() end)
+        row:SetScript("OnDragStart", function()
+            if not (QuestGlassDB.options and QuestGlassDB.options.stripLocked) then
+                strip:StartMoving()
+            end
+        end)
         row:SetScript("OnDragStop", function()
             strip:StopMovingOrSizing()
             local point, _, relPoint, x, y = strip:GetPoint()
@@ -256,9 +265,27 @@ local function CreateStrip()
     end
 end
 
+-- Hide the strip during combat when the option is on
+local combatWatcher = CreateFrame("Frame")
+combatWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
+combatWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
+combatWatcher:SetScript("OnEvent", function(_, event)
+    if not (QuestGlassDB.options and QuestGlassDB.options.stripCombatHide) then return end
+    if event == "PLAYER_REGEN_DISABLED" then
+        if strip then strip:Hide() end
+    else
+        NS.RefreshTracker()
+    end
+end)
+
 function NS.RefreshTracker()
     local pins = Pins()
     if #pins == 0 then
+        if strip then strip:Hide() end
+        return
+    end
+    if QuestGlassDB.options and QuestGlassDB.options.stripCombatHide
+        and InCombatLockdown() then
         if strip then strip:Hide() end
         return
     end

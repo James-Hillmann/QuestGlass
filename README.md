@@ -39,6 +39,7 @@ only if you changed the `.toc`.
 | `/qg pin <achID>` | Pin/unpin an achievement (easier: the Pin button in the detail view) |
 | `/qg way` | Re-point the arrow at the tracked storyline |
 | `/qg automap <achID>` | Debug: show quest→questline mapping for an achievement |
+| `/qg options` | Open the options panel (scales, strip lock, combat hide) |
 | `/qg rebuild` | Force a full index rebuild (normally automatic per patch) |
 
 - With an empty search box, the window shows your "closest to completion"
@@ -61,6 +62,12 @@ only if you changed the `.toc`.
 - ESC closes the window (first ESC unfocuses the search box if you're
   typing) — the strip keeps your place. Drag anywhere to move; position is
   saved.
+- **Other ways in**: bind a key under Options → Keybindings → AddOns; click
+  QuestGlass in the addon compartment (minimap dropdown); or **Ctrl+click an
+  achievement in Blizzard's achievement UI** to open it in QuestGlass.
+- **Shift-click** a search result to link the achievement in chat.
+- `/qg options`: window & strip scale sliders, lock the strip, hide the strip
+  in combat.
 
 ## Troubleshooting
 

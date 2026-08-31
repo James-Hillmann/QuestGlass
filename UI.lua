@@ -20,6 +20,7 @@ local detail = {}
 
 local RunSearch -- forward declaration (defined under "Search plumbing")
 local selectedQuestLine -- quest line the user clicked in the detail view
+local scrollBar
 
 local function AchProgress(achID)
     local n = GetAchievementNumCriteria(achID)
@@ -55,6 +56,14 @@ local function RefreshList()
     local visible = MaxVisibleRows()
     local maxOffset = math.max(0, count - visible)
     if scrollOffset > maxOffset then scrollOffset = maxOffset end
+
+    if scrollBar then
+        scrollBar.updating = true
+        scrollBar:SetMinMaxValues(0, maxOffset)
+        scrollBar:SetValue(scrollOffset)
+        scrollBar:SetShown(maxOffset > 0)
+        scrollBar.updating = false
+    end
 
     for i = 1, NUM_ROWS do
         local row = listRows[i]
@@ -353,6 +362,7 @@ local function CreateMainFrame()
     })
     frame:Hide() -- frames are shown by default; ToggleUI decides visibility
     frame:SetFrameStrata("HIGH")
+    frame:SetScale(QuestGlassDB.options and QuestGlassDB.options.windowScale or 1)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
@@ -474,6 +484,31 @@ local function CreateMainFrame()
     listAnchor:EnableMouseWheel(true)
     listAnchor:SetScript("OnMouseWheel", OnMouseWheel)
     listAnchor:SetClipsChildren(true)
+
+    scrollBar = CreateFrame("Slider", nil, frame)
+    scrollBar:SetOrientation("VERTICAL")
+    scrollBar:SetWidth(6)
+    scrollBar:SetPoint("TOPLEFT", listAnchor, "TOPRIGHT", 4, 0)
+    scrollBar:SetPoint("BOTTOMLEFT", listAnchor, "BOTTOMRIGHT", 4, 0)
+    local track = scrollBar:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints()
+    track:SetColorTexture(1, 1, 1, 0.05)
+    scrollBar:SetThumbTexture("Interface\\Buttons\\WHITE8x8")
+    local thumb = scrollBar:GetThumbTexture()
+    thumb:SetSize(6, 36)
+    thumb:SetVertexColor(0.65, 0.65, 0.65, 0.7)
+    scrollBar:SetMinMaxValues(0, 0)
+    scrollBar:SetValueStep(1)
+    scrollBar:SetObeyStepOnDrag(true)
+    scrollBar:Hide()
+    scrollBar:SetScript("OnValueChanged", function(self, v)
+        if self.updating then return end
+        v = math.floor(v + 0.5)
+        if v ~= scrollOffset then
+            scrollOffset = v
+            RefreshList()
+        end
+    end)
     detail.listAnchor = listAnchor
 
     for i = 1, NUM_ROWS do
@@ -504,6 +539,11 @@ local function CreateMainFrame()
 
         row:SetScript("OnClick", function(self)
             if self.achID then
+                if IsShiftKeyDown() then -- link into chat, like Blizzard's UI
+                    local link = GetAchievementLink(self.achID)
+                    if link then ChatEdit_InsertLink(link) end
+                    return
+                end
                 ShowDetail(self.achID)
             elseif self.critData and self.critData.questLineID
                 and not self.critData.completed then
